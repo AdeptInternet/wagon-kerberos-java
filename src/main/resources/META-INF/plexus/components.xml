@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component-set>
+    <components>
+        <component>
+            <role>org.apache.maven.wagon.Wagon</role>
+            <role-hint>http</role-hint>
+            <implementation>org.adeptnet.maven.wagon.providers.http.AdeptWagon</implementation>
+            <instantiation-strategy>per-lookup</instantiation-strategy>
+        </component>
+        <component>
+            <role>org.apache.maven.wagon.Wagon</role>
+            <role-hint>https</role-hint>
+            <implementation>org.adeptnet.maven.wagon.providers.http.AdeptWagon</implementation>
+            <instantiation-strategy>per-lookup</instantiation-strategy>
+        </component>
+    </components>
+</component-set>
