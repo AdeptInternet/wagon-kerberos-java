@@ -77,9 +77,40 @@ public class SPNegoSchemeFactory implements AuthSchemeFactory, AuthSchemeProvide
         return new InternalSPNegoScheme(this.stripPort);
     }
 
+    private static class InternalCacheEntry {
+
+        private static final long CACHE = 60 * 1000;
+
+        private final String server;
+        private final long age;
+        private final byte[] token;
+
+        public InternalCacheEntry(String server, long age, byte[] token) {
+            this.server = server;
+            this.age = age;
+            this.token = token;
+        }
+
+        public String getServer() {
+            return server;
+        }
+
+        public long getAge() {
+            return age;
+        }
+
+        public byte[] getToken() {
+            return token;
+        }
+
+        public boolean hasExpired() {
+            return age + CACHE < System.currentTimeMillis();
+        }
+    }
+
     private static class InternalSPNegoScheme extends SPNegoScheme {
 
-        private static final java.util.Map<String, byte[]> cache = new java.util.HashMap<>();
+        private static final java.util.Map<String, InternalCacheEntry> cache = new java.util.HashMap<>();
 
         public InternalSPNegoScheme(boolean stripPort) {
             super(stripPort);
@@ -114,6 +145,12 @@ public class SPNegoSchemeFactory implements AuthSchemeFactory, AuthSchemeProvide
 
         @Override
         protected byte[] generateToken(byte[] input, String authServer) throws GSSException {
+            if (cache.containsKey(authServer)) {
+                final InternalCacheEntry entry = cache.get(authServer);
+                if (entry.hasExpired()) {
+                    cache.remove(authServer);
+                }
+            }
             if (!cache.containsKey(authServer)) {
                 String server;
                 try {
@@ -123,9 +160,10 @@ public class SPNegoSchemeFactory implements AuthSchemeFactory, AuthSchemeProvide
                     LOG.log(Level.SEVERE, null, ex);
                     server = authServer;
                 }
-                cache.put(authServer, super.generateToken(input, server));
+                final InternalCacheEntry entry = new InternalCacheEntry(authServer, System.currentTimeMillis(), super.generateToken(input, server));
+                cache.put(authServer, entry);
             }
-            return cache.get(authServer);
+            return cache.get(authServer).getToken();
         }
     }
 }
